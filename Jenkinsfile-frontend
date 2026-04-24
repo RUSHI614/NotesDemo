@@ -69,8 +69,8 @@ pipeline {
                     sh '''
                         echo "Logging in to Docker Hub"
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                        echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
-                        docker pull ${IMAGE_NAME}:${IMG_TAG}
+                        echo "Creating external network if it doesn't exist"
+                        docker network create app_net || true
                         echo "Stopping any containers using port 80"
                         docker stop $(docker ps -q --filter "publish=80") || true
                         docker rm $(docker ps -aq --filter "publish=80") || true
