@@ -8,10 +8,10 @@ pipeline {
     }
     agent any
 
-    environment {
-        // INFISICAL_TOKEN = credentials('infisical-machine-token')
-        // SENTRY_AUTH_TOKEN = credentials('sentry-auth-token')
-    }
+    // environment {
+    //     // INFISICAL_TOKEN = credentials('infisical-machine-token')
+    //     // SENTRY_AUTH_TOKEN = credentials('sentry-auth-token')
+    // }
 
     stages {
         stage('Initialize') {
