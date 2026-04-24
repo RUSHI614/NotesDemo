@@ -70,9 +70,11 @@ pipeline {
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                         echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
                         docker pull ${IMAGE_NAME}:${IMG_TAG}
-                        echo "Stopping any containers using port 27017"
+                        echo "Stopping any containers using ports 27017 and 8081"
                         docker stop $(docker ps -q --filter "publish=27017") || true
+                        docker stop $(docker ps -q --filter "publish=8081") || true
                         docker rm $(docker ps -aq --filter "publish=27017") || true
+                        docker rm $(docker ps -aq --filter "publish=8081") || true
                         echo "Cleaning up existing containers, volumes, and orphaned containers"
                         docker-compose -f ${COMPOSE_FILE} down --volumes --remove-orphans || true
                         echo "Starting compose deployment"
