@@ -33,7 +33,7 @@ app.use((req, res, next) => {
 
 // ------------------- ROUTES -------------------
 
-app.get('/goals', async (req, res) => {
+async function fetchGoals(req, res) {
   console.log('TRYING TO FETCH GOALS');
   try {
     const goals = await Goal.find();
@@ -50,9 +50,9 @@ app.get('/goals', async (req, res) => {
     console.error(err.message);
     res.status(500).json({ message: 'Failed to load goals.' });
   }
-});
+}
 
-app.post('/goals', async (req, res) => {
+async function saveGoal(req, res) {
   console.log('TRYING TO STORE GOAL');
   const goalText = req.body.text;
 
@@ -78,9 +78,9 @@ app.post('/goals', async (req, res) => {
     console.error(err.message);
     res.status(500).json({ message: 'Failed to save goal.' });
   }
-});
+}
 
-app.delete('/goals/:id', async (req, res) => {
+async function deleteGoal(req, res) {
   console.log('TRYING TO DELETE GOAL');
   try {
     await Goal.deleteOne({ _id: req.params.id });
@@ -92,7 +92,16 @@ app.delete('/goals/:id', async (req, res) => {
     console.error(err.message);
     res.status(500).json({ message: 'Failed to delete goal.' });
   }
-});
+}
+
+app.get('/goals', fetchGoals);
+app.get('/api/goals', fetchGoals);
+
+app.post('/goals', saveGoal);
+app.post('/api/goals', saveGoal);
+
+app.delete('/goals/:id', deleteGoal);
+app.delete('/api/goals/:id', deleteGoal);
 
 // Temporary test route (for verifying Sentry integration)
 // app.get('/sentry-test', (req, res) => {
