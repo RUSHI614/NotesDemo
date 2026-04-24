@@ -2,10 +2,12 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'rushi614/notes-backend'
-        BACKEND_DIR = 'backend'
-        COMPOSE_FILE = 'docker-compose-backend.yml'
-        COMPOSE_PROJECT_NAME = 'notebe'
+        SERVICE_TYPE = "${env.JOB_NAME.contains('backend') ? 'backend' : 'frontend'}"
+        IMAGE_NAME = "rushi614/notes-${SERVICE_TYPE}"
+        SERVICE_DIR = "${SERVICE_TYPE}"
+        COMPOSE_FILE = "docker-compose-${SERVICE_TYPE}.yml"
+        COMPOSE_PROJECT_NAME = "${SERVICE_TYPE == 'backend' ? 'notebe' : 'notesfe'}"
+        PORT_FILTER = "${SERVICE_TYPE == 'backend' ? '27017,8081' : '80'}"
     }
 
     parameters {
@@ -30,10 +32,10 @@ pipeline {
             }
         }
 
-        stage('Build & Push Backend Image') {
+        stage('Build & Push Image') {
             steps {
-                echo '=== Build & Push Backend Image ==='
-                dir(env.BACKEND_DIR) {
+                echo "=== Build & Push ${SERVICE_TYPE.capitalize()} Image ==="
+                dir(env.SERVICE_DIR) {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh '''
                             echo "Logging in to Docker Hub"
@@ -62,20 +64,22 @@ pipeline {
             }
         }
 
-        stage('Deploy Backend') {
+        stage('Deploy') {
             steps {
-                echo '=== Deploy Backend ==='
+                echo "=== Deploy ${SERVICE_TYPE.capitalize()} ==="
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh '''
                         echo "Logging in to Docker Hub"
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
+                        docker pull ${IMAGE_NAME}:${IMG_TAG}
                         echo "Creating external network if it doesn't exist"
                         docker network create app_net || true
-                        echo "Stopping any containers using ports 27017 and 8081"
-                        docker stop $(docker ps -q --filter "publish=27017") || true
-                        docker stop $(docker ps -q --filter "publish=8081") || true
-                        docker rm $(docker ps -aq --filter "publish=27017") || true
-                        docker rm $(docker ps -aq --filter "publish=8081") || true
+                        echo "Stopping any containers using ports ${PORT_FILTER}"
+                        for port in $(echo ${PORT_FILTER} | tr ',' ' '); do
+                            docker stop $(docker ps -q --filter "publish=$port") || true
+                            docker rm $(docker ps -aq --filter "publish=$port") || true
+                        done
                         echo "Cleaning up existing containers, volumes, and orphaned containers"
                         docker-compose -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} down --volumes --remove-orphans || true
                         echo "Starting compose deployment"
@@ -98,10 +102,10 @@ pipeline {
 
     post {
         success {
-            echo 'Backend pipeline completed and deployed successfully'
+            echo "${SERVICE_TYPE.capitalize()} pipeline completed and deployed successfully"
         }
         failure {
-            echo 'Backend pipeline failed during execution'
+            echo "${SERVICE_TYPE.capitalize()} pipeline failed during execution"
         }
     }
 }
