@@ -33,12 +33,16 @@ pipeline {
             steps {
                 echo '=== Build & Push Backend Image ==='
                 dir(env.BACKEND_DIR) {
-                    sh '''
-                        echo "Building Docker image ${IMAGE_NAME}:${IMG_TAG}"
-                        docker build -t ${IMAGE_NAME}:${IMG_TAG} .
-                        echo "Pushing Docker image to Docker Hub"
-                        docker push ${IMAGE_NAME}:${IMG_TAG}
-                    '''
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh '''
+                            echo "Logging in to Docker Hub"
+                            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                            echo "Building Docker image ${IMAGE_NAME}:${IMG_TAG}"
+                            docker build -t ${IMAGE_NAME}:${IMG_TAG} .
+                            echo "Pushing Docker image to Docker Hub"
+                            docker push ${IMAGE_NAME}:${IMG_TAG}
+                        '''
+                    }
                 }
             }
         }
@@ -60,13 +64,17 @@ pipeline {
         stage('Deploy Backend') {
             steps {
                 echo '=== Deploy Backend ==='
-                sh '''
-                    echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
-                    docker pull ${IMAGE_NAME}:${IMG_TAG}
-                    echo "Starting compose deployment"
-                    docker-compose -f ${COMPOSE_FILE} pull
-                    docker-compose -f ${COMPOSE_FILE} up -d
-                '''
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh '''
+                        echo "Logging in to Docker Hub"
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
+                        docker pull ${IMAGE_NAME}:${IMG_TAG}
+                        echo "Starting compose deployment"
+                        docker-compose -f ${COMPOSE_FILE} pull
+                        docker-compose -f ${COMPOSE_FILE} up -d
+                    '''
+                }
             }
         }
 
