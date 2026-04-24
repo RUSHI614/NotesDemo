@@ -31,4 +31,4 @@ RUN mkdir logs
 EXPOSE 80
 
 # Use the direct infisical run command to inject secrets at runtime
-ENTRYPOINT ["sh", "-c", "infisical run --token=$INFISICAL_TOKEN --domain=$INFISICAL_API_URL --projectId=$PROJECT_ID --env=$ENV -- npm start"]
+ENTRYPOINT ["npm start"]

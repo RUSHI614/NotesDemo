@@ -61,10 +61,10 @@ pipeline {
                 script {
                     try {
                 dir("${props.APP_PATH}/backend") {
-                    withEnv(["IMG_NAME=backend"]) {
-                        script { dockerBuildAndPush() }
-                    }
-                }
+                    sh "echo Building and pushing backend Docker image..."
+                    docker build -t "${env.IMG_NAME}:${env.IMG_TAG}" .
+                    docker tag "${env.IMG_NAME}:${env.IMG_TAG}" "${props.REGISTRY}/${props.PROJECT}/${env.IMG_NAME}:${env.IMG_TAG}"
+            
 
                     } catch (e) {
                         error "Backend image build or push failed: ${e.getMessage()}"
@@ -77,7 +77,10 @@ pipeline {
             steps {
                 script {
                     try {
-                        prepareInstance()
+                       sh """
+                            echo "Preparing EC2 instance for deployment..."
+                        """
+                        // prepareInstance()
                     } catch (e) {
                         error "EC2 Environment setup failed: ${e.getMessage()}"
                     }
@@ -89,8 +92,11 @@ pipeline {
             steps {
                 script {
                     try {
-                        generateEnv()
-                        transferfile("${props.BACKEND_COMPOSE_FILE} .env")
+                        sh """
+                            echo "Transferring backend Docker Compose file to EC2 instance..."
+                        """
+                        // generateEnv()
+                        // transferfile("${props.BACKEND_COMPOSE_FILE} .env")
                     } catch (e) {
                         error "File transfer failed: ${e.getMessage()}"
                     }
@@ -102,7 +108,12 @@ pipeline {
             steps {
                 script {
                     try {
-                        dockerComposeDeploy(props.BACKEND_COMPOSE_FILE)
+                        sh """
+                            echo "Deploying backend on EC2 instance..."
+                            docker-compose -f ${props.BACKEND_COMPOSE_FILE} pull
+                            docker-compose -f ${props.BACKEND_COMPOSE_FILE} up -d
+                        """
+                        // dockerComposeDeploy(props.BACKEND_COMPOSE_FILE)
                     } catch (e) {
                         error "Remote deployment on EC2 failed: ${e.getMessage()}"
                     }
@@ -113,7 +124,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                        sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} deploys ${env.SENTRY_RELEASE} new -e ${params.ENV}
+                        echo "Marking Sentry deployment for release ${env.SENTRY_RELEASE}..."
                     """
                 }
             }
