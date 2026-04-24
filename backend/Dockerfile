@@ -25,4 +25,4 @@ RUN mkdir logs
 
 EXPOSE 80
 
-ENTRYPOINT ["npm start"]
+ENTRYPOINT ["node", "app.js"]
