@@ -70,8 +70,8 @@ pipeline {
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                         echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
                         docker pull ${IMAGE_NAME}:${IMG_TAG}
-                        echo "Cleaning up existing containers"
-                        docker-compose -f ${COMPOSE_FILE} down || true
+                        echo "Cleaning up existing containers, volumes, and orphaned containers"
+                        docker-compose -f ${COMPOSE_FILE} down --volumes --remove-orphans || true
                         echo "Starting compose deployment"
                         docker-compose -f ${COMPOSE_FILE} up -d
                     '''
