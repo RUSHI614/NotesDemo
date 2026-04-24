@@ -1,133 +1,79 @@
-@Library('my-shared-lib') _
-
-def props = variables()
-
 pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'rushi614/notes-backend'
+        BACKEND_DIR = 'backend'
+        COMPOSE_FILE = 'docker-compose-backend.yml'
+    }
+
     parameters {
         choice(name: 'ENV', choices: ['dev', 'prod'], description: 'Environment to deploy to')
     }
-    agent any
-
-    // environment {
-    //     // INFISICAL_TOKEN = credentials('infisical-machine-token')
-    //     // SENTRY_AUTH_TOKEN = credentials('sentry-auth-token')
-    // }
 
     stages {
         stage('Initialize') {
             steps {
-                script {    
-                    try {
-                        checkout scm
-                    } catch (e) {
-                         error "Initialization failed: ${e.getMessage()}"
-                    }
-                }
+                echo '=== Initialize ==='
+                checkout scm
             }
         }
 
         stage('Prepare Image Tag') {
             steps {
+                echo '=== Prepare Image Tag ==='
                 script {
-                    try {
-                  env.IMG_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                //   env.SENTRY_RELEASE = "rushinotes-backend@${env.IMG_TAG}"
-                //   echo "Sentry Release: ${env.SENTRY_RELEASE}"
-                //   echo "Backend image tag: ${env.IMG_TAG}"
-                    } catch (e) {
-                        error "Failed to prepare backend image tag: ${e.getMessage()}"
-                    }
+                    env.IMG_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    echo "Using image tag: ${env.IMG_TAG}"
                 }
             }
         }
-        
-        // stage('Create Sentry Release') {
-        //     steps {
-        //         script {
-        //             sh """
-        //                 sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} new ${env.SENTRY_RELEASE}
-        //                 sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} set-commits ${env.SENTRY_RELEASE} --auto
-        //                 sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} finalize ${env.SENTRY_RELEASE}
-        //             """
-        //         }
-        //     }
-        // }
-
-
-
 
         stage('Build & Push Backend Image') {
             steps {
-                script {
-                    try {
-                        dir("${props.APP_PATH}/backend") {
-                            sh "echo Building and pushing backend Docker image..."
-                            sh '''
-                                docker build -t "${env.IMG_NAME}:${env.IMG_TAG}" .
-                                docker tag "${env.IMG_NAME}:${env.IMG_TAG}" "${props.REGISTRY}/${props.PROJECT}/${env.IMG_NAME}:${env.IMG_TAG}"
-                            '''
-                        }
-                    } catch (e) {
-                        error "Backend image build or push failed: ${e.getMessage()}"
-                    }
+                echo '=== Build & Push Backend Image ==='
+                dir(env.BACKEND_DIR) {
+                    sh '''
+                        echo "Building Docker image ${IMAGE_NAME}:${IMG_TAG}"
+                        docker build -t ${IMAGE_NAME}:${IMG_TAG} .
+                        echo "Pushing Docker image to Docker Hub"
+                        docker push ${IMAGE_NAME}:${IMG_TAG}
+                    '''
                 }
             }
         }
 
         stage('Prepare EC2 Instance') {
             steps {
-                script {
-                    try {
-                       sh """
-                            echo "Preparing EC2 instance for deployment..."
-                        """
-                        // prepareInstance()
-                    } catch (e) {
-                        error "EC2 Environment setup failed: ${e.getMessage()}"
-                    }
-                }
+                echo '=== Prepare EC2 Instance ==='
+                sh 'echo "No EC2 preparation configured; skipping manual preparation."'
             }
         }
 
         stage('Transfer Backend Files') {
             steps {
-                script {
-                    try {
-                        sh """
-                            echo "Transferring backend Docker Compose file to EC2 instance..."
-                        """
-                        // generateEnv()
-                        // transferfile("${props.BACKEND_COMPOSE_FILE} .env")
-                    } catch (e) {
-                        error "File transfer failed: ${e.getMessage()}"
-                    }
-                }
+                echo '=== Transfer Backend Files ==='
+                sh 'echo "No remote transfer configured; this is a manual placeholder."'
             }
         }
 
         stage('Deploy Backend') {
             steps {
-                script {
-                    try {
-                        sh """
-                            echo "Deploying backend on EC2 instance..."
-                            docker-compose -f ${props.BACKEND_COMPOSE_FILE} pull
-                            docker-compose -f ${props.BACKEND_COMPOSE_FILE} up -d
-                        """
-                        // dockerComposeDeploy(props.BACKEND_COMPOSE_FILE)
-                    } catch (e) {
-                        error "Remote deployment on EC2 failed: ${e.getMessage()}"
-                    }
-                }
+                echo '=== Deploy Backend ==='
+                sh '''
+                    echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
+                    docker pull ${IMAGE_NAME}:${IMG_TAG}
+                    echo "Starting compose deployment"
+                    docker-compose -f ${COMPOSE_FILE} pull
+                    docker-compose -f ${COMPOSE_FILE} up -d
+                '''
             }
         }
+
         stage('Mark Sentry Deployment') {
             steps {
-                script {
-                    sh """
-                        echo "Marking Sentry deployment for release ${env.SENTRY_RELEASE}..."
-                    """
-                }
+                echo '=== Mark Sentry Deployment ==='
+                sh 'echo "Sentry deployment marking is not configured in this simplified flow."'
             }
         }
 
@@ -137,13 +83,10 @@ pipeline {
 
     post {
         success {
-            echo "Backend pipeline completed and deployed successfully"
+            echo 'Backend pipeline completed and deployed successfully'
         }
         failure {
-            echo "Backend pipeline failed during execution"
-        }
-        always {
-            sh "rm -f ${props.APP_PATH}/.env || true"
+            echo 'Backend pipeline failed during execution'
         }
     }
 }
