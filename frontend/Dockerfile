@@ -11,7 +11,6 @@ RUN npm run build
 
 # ---------- Runtime stage ----------
 FROM node:20.16-alpine
-# FROM alpine:3.20
 WORKDIR /app
 
 # Install serve globally
@@ -25,5 +24,4 @@ EXPOSE 80
 
 # Start the static file server
 CMD ["serve", "-s", "build", "-l", "80"]
-ENTRYPOINT ["sh", "-c", "echo 'Frontend container initialized. Static assets available in /app/build' && tail -f /dev/null"]
 
