@@ -63,6 +63,7 @@ services:
 
 networks:
   app_net:
+    external: true
 
 volumes:
   mongo-data:

@@ -5,6 +5,7 @@ pipeline {
         IMAGE_NAME = 'rushi614/notes-backend'
         BACKEND_DIR = 'backend'
         COMPOSE_FILE = 'docker-compose-backend.yml'
+        COMPOSE_PROJECT_NAME = 'notebe'
     }
 
     parameters {
@@ -76,9 +77,9 @@ pipeline {
                         docker rm $(docker ps -aq --filter "publish=27017") || true
                         docker rm $(docker ps -aq --filter "publish=8081") || true
                         echo "Cleaning up existing containers, volumes, and orphaned containers"
-                        docker-compose -f ${COMPOSE_FILE} down --volumes --remove-orphans || true
+                        docker-compose -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} down --volumes --remove-orphans || true
                         echo "Starting compose deployment"
-                        docker-compose -f ${COMPOSE_FILE} up -d
+                        docker-compose -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d
                     '''
                 }
             }
