@@ -60,12 +60,13 @@ pipeline {
             steps {
                 script {
                     try {
-                dir("${props.APP_PATH}/backend") {
-                    sh "echo Building and pushing backend Docker image..."
-                    docker build -t "${env.IMG_NAME}:${env.IMG_TAG}" .
-                    docker tag "${env.IMG_NAME}:${env.IMG_TAG}" "${props.REGISTRY}/${props.PROJECT}/${env.IMG_NAME}:${env.IMG_TAG}"
-            
-
+                        dir("${props.APP_PATH}/backend") {
+                            sh "echo Building and pushing backend Docker image..."
+                            sh '''
+                                docker build -t "${env.IMG_NAME}:${env.IMG_TAG}" .
+                                docker tag "${env.IMG_NAME}:${env.IMG_TAG}" "${props.REGISTRY}/${props.PROJECT}/${env.IMG_NAME}:${env.IMG_TAG}"
+                            '''
+                        }
                     } catch (e) {
                         error "Backend image build or push failed: ${e.getMessage()}"
                     }
