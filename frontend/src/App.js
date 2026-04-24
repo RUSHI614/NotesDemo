@@ -14,7 +14,8 @@ function App() {
       setIsLoading(true);
 
       try {
-        const response = await fetch('http://notebe_backend_1:80/api/goals');
+        const apiBase = `${window.location.protocol}//${window.location.hostname}:8081`;
+        const response = await fetch(`${apiBase}/api/goals`);
 
         const resData = await response.json();
 
@@ -39,7 +40,8 @@ function App() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://notebe_backend_1:80/api/goals', {
+      const apiBase = `${window.location.protocol}//${window.location.hostname}:8081`;
+      const response = await fetch(`${apiBase}/api/goals`, {
         method: 'POST',
         body: JSON.stringify({
           text: goalText,
@@ -78,7 +80,8 @@ function App() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://notebe_backend_1:80/api/goals/' + goalId, {
+      const apiBase = `${window.location.protocol}//${window.location.hostname}:8081`;
+      const response = await fetch(`${apiBase}/api/goals/${goalId}`, {
         method: 'DELETE',
       });
 

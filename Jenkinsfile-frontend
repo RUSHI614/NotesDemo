@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'rushi614/notes-backend'
-        BACKEND_DIR = 'backend'
-        COMPOSE_FILE = 'docker-compose-backend.yml'
-        COMPOSE_PROJECT_NAME = 'notebe'
+        IMAGE_NAME = 'rushi614/notes-frontend'
+        FRONTEND_DIR = 'frontend'
+        COMPOSE_FILE = 'docker-compose-frontend.yml'
+        COMPOSE_PROJECT_NAME = 'notesfe'
     }
 
     parameters {
@@ -30,10 +30,10 @@ pipeline {
             }
         }
 
-        stage('Build & Push Backend Image') {
+        stage('Build & Push Frontend Image') {
             steps {
-                echo '=== Build & Push Backend Image ==='
-                dir(env.BACKEND_DIR) {
+                echo '=== Build & Push Frontend Image ==='
+                dir(env.FRONTEND_DIR) {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh '''
                             echo "Logging in to Docker Hub"
@@ -55,16 +55,16 @@ pipeline {
             }
         }
 
-        stage('Transfer Backend Files') {
+        stage('Transfer Frontend Files') {
             steps {
-                echo '=== Transfer Backend Files ==='
+                echo '=== Transfer Frontend Files ==='
                 sh 'echo "No remote transfer configured; this is a manual placeholder."'
             }
         }
 
-        stage('Deploy Backend') {
+        stage('Deploy Frontend') {
             steps {
-                echo '=== Deploy Backend ==='
+                echo '=== Deploy Frontend ==='
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh '''
                         echo "Logging in to Docker Hub"
@@ -73,14 +73,12 @@ pipeline {
                         docker pull ${IMAGE_NAME}:${IMG_TAG}
                         echo "Creating external network if it doesn't exist"
                         docker network create app_net || true
-                        echo "Stopping any containers using ports 27017 and 8081"
-                        for port in 27017 8081; do
-                            ids=$(docker ps -q --filter "publish=$port")
-                            if [ -n "$ids" ]; then
-                                docker stop $ids || true
-                                docker rm $ids || true
-                            fi
-                        done
+                        echo "Stopping any containers using port 80"
+                        ids=$(docker ps -q --filter "publish=80")
+                        if [ -n "$ids" ]; then
+                            docker stop $ids || true
+                            docker rm $ids || true
+                        fi
                         echo "Cleaning up existing containers, volumes, and orphaned containers"
                         docker-compose -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} down --volumes --remove-orphans || true
                         echo "Starting compose deployment"
@@ -93,11 +91,10 @@ pipeline {
 
     post {
         success {
-            echo 'Backend pipeline completed and deployed successfully'
+            echo 'Frontend pipeline completed and deployed successfully'
         }
         failure {
-            echo 'Backend pipeline failed during execution'
+            echo 'Frontend pipeline failed during execution'
         }
     }
 }
-
