@@ -1,56 +1,47 @@
-@Library('my-shared-lib') _
-
-def props = variables()
-
 pipeline {
-    parameters {
-        choice(name: 'ENV', choices: ['dev', 'prod'], description: 'Environment to deploy to')
-    }
     agent any
 
     environment {
-        INFISICAL_TOKEN = credentials('infisical-machine-token')
+        IMAGE_NAME = 'rushi614/notes-frontend'
+        FRONTEND_DIR = 'frontend'
+        COMPOSE_FILE = 'docker-compose-frontend.yml'
+    }
 
+    parameters {
+        choice(name: 'ENV', choices: ['dev', 'prod'], description: 'Environment to deploy to')
     }
 
     stages {
         stage('Initialize') {
             steps {
-                script {
-                    try {
-                        checkout scm
-                    } catch (e) {
-                         error "Initialization failed: ${e.getMessage()}"
-                    }
-                }
+                echo '=== Initialize ==='
+                checkout scm
             }
         }
 
         stage('Prepare Image Tag') {
             steps {
+                echo '=== Prepare Image Tag ==='
                 script {
-                    try {
-                 env.IMG_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    echo "Frontend image tag: ${env.IMG_TAG}"
-                    } catch (e) {
-                        error "Failed to prepare frontend image tag: ${e.getMessage()}"
-                    }
+                    env.IMG_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    echo "Using image tag: ${env.IMG_TAG}"
                 }
             }
         }
 
         stage('Build & Push Frontend Image') {
             steps {
-                script {
-                    try {
-                dir("${props.APP_PATH}/frontend") {
-                    withEnv(["IMG_NAME=frontend"]) {
-                        script { dockerBuildAndPush() }
-                    }
-                }
-
-                    } catch (e) {
-                        error "Frontend image build or push failed: ${e.getMessage()}"
+                echo '=== Build & Push Frontend Image ==='
+                dir(env.FRONTEND_DIR) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh '''
+                            echo "Logging in to Docker Hub"
+                            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                            echo "Building Docker image ${IMAGE_NAME}:${IMG_TAG}"
+                            docker build -t ${IMAGE_NAME}:${IMG_TAG} .
+                            echo "Pushing Docker image to Docker Hub"
+                            docker push ${IMAGE_NAME}:${IMG_TAG}
+                        '''
                     }
                 }
             }
@@ -58,32 +49,31 @@ pipeline {
 
         stage('Prepare EC2 Instance') {
             steps {
-                script {
-                    try {
-                        prepareInstance()
-                    } catch (e) {
-                        error "EC2 Environment setup failed: ${e.getMessage()}"
-                    }
-                }
+                echo '=== Prepare EC2 Instance ==='
+                sh 'echo "No EC2 preparation configured; skipping manual preparation."'
             }
         }
 
         stage('Transfer Frontend Files') {
-
             steps {
-                script { generateEnv() }
-                script { transferfile("${props.FRONTEND_COMPOSE_FILE} .env frontend/nginx") }
+                echo '=== Transfer Frontend Files ==='
+                sh 'echo "No remote transfer configured; this is a manual placeholder."'
             }
         }
 
         stage('Deploy Frontend') {
             steps {
-                script {
-                    try {
-                        dockerComposeDeploy(props.FRONTEND_COMPOSE_FILE)
-                    } catch (e) {
-                        error "Remote deployment on EC2 failed: ${e.getMessage()}"
-                    }
+                echo '=== Deploy Frontend ==='
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh '''
+                        echo "Logging in to Docker Hub"
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        echo "Pulling image ${IMAGE_NAME}:${IMG_TAG} from Docker Hub"
+                        docker pull ${IMAGE_NAME}:${IMG_TAG}
+                        echo "Starting compose deployment"
+                        docker-compose -f ${COMPOSE_FILE} pull
+                        docker-compose -f ${COMPOSE_FILE} up -d
+                    '''
                 }
             }
         }
@@ -91,13 +81,13 @@ pipeline {
 
     post {
         success {
-            echo "Frontend pipeline completed and deployed successfully"
+            echo 'Frontend pipeline completed and deployed successfully'
         }
         failure {
-            echo "Frontend pipeline failed during execution"
+            echo 'Frontend pipeline failed during execution'
         }
-        always {
-            sh "rm -f ${props.APP_PATH}/.env || true"
+    }
+}
         }
     }
 }

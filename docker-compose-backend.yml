@@ -33,7 +33,7 @@ services:
     #     - INFISICAL_TOKEN=${INFISICAL_TOKEN}
     #     - PROJECT_ID=6f3f6871-01fd-42c8-a897-664abc9d71e2
     #     - ENV=dev
-    image: ${REGISTRY}/${PROJECT}/backend:${IMG_TAG}
+    image: rushi614/notes-backend:${IMG_TAG}
 
     restart: unless-stopped
     ports:
@@ -41,11 +41,6 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-    environment:
-      - INFISICAL_API_URL=${INFISICAL_API_URL}
-      - INFISICAL_TOKEN=${INFISICAL_TOKEN}
-      - PROJECT_ID=${PROJECT_ID}
-      - ENV=${ENV}
     networks:
       - app_net
     extra_hosts:
@@ -68,8 +63,6 @@ services:
 
 networks:
   app_net:
-    external: true
-    name: ${NETWORK_NAME}
 
 volumes:
   mongo-data:

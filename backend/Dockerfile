@@ -13,11 +13,6 @@ FROM node:20.16-alpine
 
 WORKDIR /app
 
-# Install Infisical CLI in the runtime stage
-RUN apk add --no-cache bash curl && curl -1sLf \
-  'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.alpine.sh' | bash \
-  && apk add infisical
-
 # ONLY copy necessary files
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -30,5 +25,4 @@ RUN mkdir logs
 
 EXPOSE 80
 
-# Use the direct infisical run command to inject secrets at runtime
 ENTRYPOINT ["npm start"]

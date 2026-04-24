@@ -1,4 +1,4 @@
-require("./instrument"); // MUST be first
+// require("./instrument"); // MUST be first
 
 const fs = require('fs');
 const path = require('path');
@@ -7,13 +7,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
-const Sentry = require("@sentry/node");
+// const Sentry = require("@sentry/node");
 
 const Goal = require('./models/goal');
 
 const app = express();
 
 // Sentry request handler (must be before routes)
+// app.use(Sentry.Handlers.requestHandler());
 
 const accessLogStream = fs.createWriteStream(
   path.join(__dirname, 'logs', 'access.log'),
@@ -44,7 +45,7 @@ app.get('/goals', async (req, res) => {
     });
     console.log('FETCHED GOALS');
   } catch (err) {
-    Sentry.captureException(err); // Capture handled error
+    // Sentry.captureException(err); // Capture handled error
     console.error('ERROR FETCHING GOALS');
     console.error(err.message);
     res.status(500).json({ message: 'Failed to load goals.' });
@@ -72,7 +73,7 @@ app.post('/goals', async (req, res) => {
     });
     console.log('STORED NEW GOAL');
   } catch (err) {
-    Sentry.captureException(err); // Capture handled error
+    // Sentry.captureException(err); // Capture handled error
     console.error('ERROR SAVING GOAL');
     console.error(err.message);
     res.status(500).json({ message: 'Failed to save goal.' });
@@ -86,7 +87,7 @@ app.delete('/goals/:id', async (req, res) => {
     res.status(200).json({ message: 'Deleted goal!' });
     console.log('DELETED GOAL');
   } catch (err) {
-    Sentry.captureException(err); // Capture handled error
+    // Sentry.captureException(err); // Capture handled error
     console.error('ERROR DELETING GOAL');
     console.error(err.message);
     res.status(500).json({ message: 'Failed to delete goal.' });
@@ -94,12 +95,12 @@ app.delete('/goals/:id', async (req, res) => {
 });
 
 // Temporary test route (for verifying Sentry integration)
-app.get('/sentry-test', (req, res) => {
-  throw new Error("Sentry Integration Test 🚨");
-});
+// app.get('/sentry-test', (req, res) => {
+//   throw new Error("Sentry Integration Test 🚨");
+// });
 
 // Sentry error handler (must be after routes)
-Sentry.setupExpressErrorHandler(app);
+// Sentry.setupExpressErrorHandler(app);
 
 
 // ------------------- DATABASE -------------------
