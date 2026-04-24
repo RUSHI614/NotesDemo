@@ -1,0 +1,14 @@
+# Runtime env files
+.env
+environment/app.env
+.env.infisical
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+environment/backend.env

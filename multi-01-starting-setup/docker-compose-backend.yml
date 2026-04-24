@@ -1,0 +1,75 @@
+version: "3.8"
+services:
+  mongodb:
+    image: mongo:6
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    # build:
+    #   context: ./backend
+    #   network: host
+    #   args:
+    #     - INFISICAL_API_URL=http://localhost:8090
+    #     - INFISICAL_TOKEN=${INFISICAL_TOKEN}
+    #     - PROJECT_ID=6f3f6871-01fd-42c8-a897-664abc9d71e2
+    #     - ENV=dev
+    image: ${REGISTRY}/${PROJECT}/backend:${IMG_TAG}
+
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - INFISICAL_API_URL=${INFISICAL_API_URL}
+      - INFISICAL_TOKEN=${INFISICAL_TOKEN}
+      - PROJECT_ID=${PROJECT_ID}
+      - ENV=${ENV}
+    networks:
+      - app_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80/goals" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  app_net:
+    external: true
+    name: ${NETWORK_NAME}
+
+volumes:
+  mongo-data:

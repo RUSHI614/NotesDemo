@@ -1,0 +1,6 @@
+node_modules
+build
+.git
+.DS_Store
+*.tar
+project_files.tar.gz

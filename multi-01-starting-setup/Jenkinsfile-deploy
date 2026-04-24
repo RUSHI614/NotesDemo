@@ -1,0 +1,48 @@
+// @Library('my-shared-lib') _
+
+// pipeline {
+//     agent any
+
+//     parameters {
+//         string(
+//             name: 'TAG',
+//             description: 'Docker image tag to deploy (same tag built by CI)'
+//         )
+//     }
+
+//     environment {
+//         EC2_HOST = '13.126.37.102'
+//         APP_DIR  = '/opt/notes-app'
+//         REGISTRY = 'registry.gitlab.webelight.co.in'
+//     }
+
+//     stages {
+
+//         stage('Deploy to EC2') {
+//             steps {
+//                 script {
+//                     try {
+//                         echo "Starting deployment on EC2"
+//                         echo "Deploying image tag: ${params.TAG}"
+
+//                         deployToEC2(params.TAG)
+
+//                         echo "Deployment completed successfully"
+//                     } catch (e) {
+//                         echo "Deployment failed"
+//                         throw e
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     post {
+//         success {
+//             echo "Application is now running on EC2"
+//         }
+//         failure {
+//             echo "Deploy pipeline failed"
+//         }
+//     }
+// }

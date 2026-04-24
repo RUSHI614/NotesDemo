@@ -1,0 +1,185 @@
+#-------------------------Build Stage---------------------------------
+FROM node:22-alpine3.19 AS builder
+
+# Set the working directory
+WORKDIR /app
+
+# Install Infisical CLI
+RUN apk add --no-cache bash curl && curl -1sLf \
+  'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.alpine.sh' | bash \
+  && apk add infisical
+
+# Arguments for Infisical (passed during build)
+ARG INFISICAL_API_URL
+ARG INFISICAL_TOKEN
+ARG ENV
+ARG PROJECT_ID
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy the entire project
+COPY . .
+
+# Export secrets to .env file during build using Machine Identity
+RUN infisical export --token=$INFISICAL_TOKEN --domain=$INFISICAL_API_URL --projectId=${PROJECT_ID} --env=${ENV} --format=dotenv > .env
+
+#-------------------------Final Stage---------------------------------
+    
+FROM node:22-alpine3.19
+
+# Set working directory
+WORKDIR /app
+
+# Copy production artifacts from builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/index.js ./
+COPY --from=builder /app/.env* ./
+
+# Use non-root user for security
+USER node
+
+# Start the application
+CMD ["npm", "start"]
+
+
+#           Machine Identity-Manually token generation
+
+ curl --location --request POST 'http://localhost:8090/api/v1/auth/universal-auth/login' \
+   --header 'Content-Type: application/x-www-form-urlencoded' \
+   --data-urlencode 'clientId=2408d0d8-f31b-46b2-996c-6d066e891ded' \
+   --data-urlencode 'clientSecret=f57d8602996966f952cc919637173c67a5a75da1a48aadf8b241a87a4e4d09ad'
+
+# docker build -t infisical-final \
+#   --build-arg INFISICAL_API_URL="http://localhost:8090" \
+#   --build-arg INFISICAL_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eUlkIjoiMDAzYzRjNjYtODczYi00ZmZiLTg2ZGQtNzhiMWNiMjQ3NDIwIiwiY2xpZW50U2VjcmV0SWQiOiIxMzgwMzdmNy05ZjM1LTQ3OWItYTMzNi0zZDUyNDg5MTFiMjMiLCJpZGVudGl0eUFjY2Vzc1Rva2VuSWQiOiIwNzY4ZWEyNi1mMGMxLTQ3NmEtYmIzOC0zNTZhNDY0ZWUxZGIiLCJhdXRoVG9rZW5UeXBlIjoiaWRlbnRpdHlBY2Nlc3NUb2tlbiIsImlhdCI6MTc3MDc4ODg4NCwiZXhwIjoxNzczMzgwODg0fQ.u53hry52xRVkz6bEK6nnoRI5sFeqR1x_fz1Ysx0Jtt4" \
+#   --build-arg ENV="dev" \
+#   --build-arg PROJECT_ID="6f3f6871-01fd-42c8-a897-664abc9d71e2" .
+
+
+
+
+
+
+
+
+export INFISICAL_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eUlkIjoiNjdmNjRlNWYtM2RkNy00YTVhLWI2YmMtYTBlNzM2MTNmNDFmIiwiY2xpZW50U2VjcmV0SWQiOiJiNmYzZTk5Yi0wMWE0LTRhOTEtODg2Ni0xNmFiYzEzN2IxNmQiLCJpZGVudGl0eUFjY2Vzc1Rva2VuSWQiOiJlNWE5NzYyMy0yMmZiLTQ2YjYtYWY5Zi03MzM0YmI4YWFmZTAiLCJhdXRoVG9rZW5UeXBlIjoiaWRlbnRpdHlBY2Nlc3NUb2tlbiIsImlhdCI6MTc3MDc5MjQ5NSwiZXhwIjoxNzczMzg0NDk1fQ.3Eiptnayw3ScoYlrjePGfrnxA5610wbXrOWmMRkBWtU"
+
+
+
+compose-file
+
+
+services:
+  mongodb:
+    image: mongo:6
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    build:
+      context: ./backend
+      network: host
+      args:
+        - INFISICAL_API_URL=http://localhost:8090
+        - INFISICAL_TOKEN=${INFISICAL_TOKEN}
+        - PROJECT_ID=6f3f6871-01fd-42c8-a897-664abc9d71e2
+        - ENV=dev
+    # image: ${REGISTRY}/${PROJECT}/backend:${IMG_TAG}
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/goals"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./frontend
+      network: host
+      args:
+        - INFISICAL_API_URL=http://localhost:8090
+        - INFISICAL_TOKEN=${INFISICAL_TOKEN}
+        - PROJECT_ID=6f3f6871-01fd-42c8-a897-664abc9d71e2
+        - ENV=dev
+    # image: ${REGISTRY}/${PROJECT}/frontend:${IMG_TAG}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    volumes:
+      - frontend-static:/app/build
+    healthcheck:
+      test: ["CMD", "ls", "/app/build/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./frontend/nginx/master.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/nginx/ssl:ro
+      - frontend-static:/usr/share/nginx/html:ro
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  frontend-static:

@@ -1,0 +1,105 @@
+@Library('my-shared-lib') _
+
+def props = variables()
+
+pipeline {
+    parameters {
+        choice(name: 'ENV', choices: ['dev', 'prod'], description: 'Environment to deploy to')
+    }
+    agent any
+
+    environment {
+        INFISICAL_TOKEN = credentials('infisical-machine-token')
+
+    }
+
+    stages {
+        stage('Initialize') {
+            steps {
+                script {
+                    try {
+                        checkout scm
+                    } catch (e) {
+                         error "Initialization failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
+        stage('Prepare Image Tag') {
+            steps {
+                script {
+                    try {
+                 env.IMG_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    echo "Frontend image tag: ${env.IMG_TAG}"
+                    } catch (e) {
+                        error "Failed to prepare frontend image tag: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
+        stage('Build & Push Frontend Image') {
+            steps {
+                script {
+                    try {
+                dir("${props.APP_PATH}/frontend") {
+                    withEnv(["IMG_NAME=frontend"]) {
+                        script { dockerBuildAndPush() }
+                    }
+                }
+
+                    } catch (e) {
+                        error "Frontend image build or push failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
+        stage('Prepare EC2 Instance') {
+            steps {
+                script {
+                    try {
+                        prepareInstance()
+                    } catch (e) {
+                        error "EC2 Environment setup failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
+        stage('Transfer Frontend Files') {
+
+            steps {
+                script { generateEnv() }
+                script { transferfile("${props.FRONTEND_COMPOSE_FILE} .env frontend/nginx") }
+            }
+        }
+
+        stage('Deploy Frontend') {
+            steps {
+                script {
+                    try {
+                        dockerComposeDeploy(props.FRONTEND_COMPOSE_FILE)
+                    } catch (e) {
+                        error "Remote deployment on EC2 failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Frontend pipeline completed and deployed successfully"
+        }
+        failure {
+            echo "Frontend pipeline failed during execution"
+        }
+        always {
+            sh "rm -f ${props.APP_PATH}/.env || true"
+        }
+    }
+}
+
+
