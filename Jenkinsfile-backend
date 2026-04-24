@@ -9,8 +9,8 @@ pipeline {
     agent any
 
     environment {
-        INFISICAL_TOKEN = credentials('infisical-machine-token')
-        SENTRY_AUTH_TOKEN = credentials('sentry-auth-token')
+        // INFISICAL_TOKEN = credentials('infisical-machine-token')
+        // SENTRY_AUTH_TOKEN = credentials('sentry-auth-token')
     }
 
     stages {
@@ -31,9 +31,9 @@ pipeline {
                 script {
                     try {
                   env.IMG_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                  env.SENTRY_RELEASE = "rushinotes-backend@${env.IMG_TAG}"
-                  echo "Sentry Release: ${env.SENTRY_RELEASE}"
-                  echo "Backend image tag: ${env.IMG_TAG}"
+                //   env.SENTRY_RELEASE = "rushinotes-backend@${env.IMG_TAG}"
+                //   echo "Sentry Release: ${env.SENTRY_RELEASE}"
+                //   echo "Backend image tag: ${env.IMG_TAG}"
                     } catch (e) {
                         error "Failed to prepare backend image tag: ${e.getMessage()}"
                     }
@@ -41,17 +41,17 @@ pipeline {
             }
         }
         
-        stage('Create Sentry Release') {
-            steps {
-                script {
-                    sh """
-                        sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} new ${env.SENTRY_RELEASE}
-                        sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} set-commits ${env.SENTRY_RELEASE} --auto
-                        sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} finalize ${env.SENTRY_RELEASE}
-                    """
-                }
-            }
-        }
+        // stage('Create Sentry Release') {
+        //     steps {
+        //         script {
+        //             sh """
+        //                 sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} new ${env.SENTRY_RELEASE}
+        //                 sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} set-commits ${env.SENTRY_RELEASE} --auto
+        //                 sentry-cli --url ${props.SENTRY_URL} releases --org ${props.SENTRY_ORG} --project ${props.SENTRY_PROJECT} finalize ${env.SENTRY_RELEASE}
+        //             """
+        //         }
+        //     }
+        // }
 
 
 
